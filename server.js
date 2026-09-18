@@ -1,35 +1,62 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-require('dotenv').config();
+const User = require('../models/User');
+const Villa = require('../models/Villa');
+const bcrypt = require('bcryptjs');
+const router = express.Router();
 
-const app = express();
-app.use(express.json({ limit: '10mb' }));
-app.use(cors());
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.find().select('-passwordHash').populate('villa').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/resort-oceanami', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('✅ MongoDB Connected'))
-  .catch((err) => console.error('❌ MongoDB Connection Error:', err));
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-passwordHash').populate('villa');
+    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/villas', require('./routes/villas'));
-app.use('/api/fees', require('./routes/fees'));
-app.use('/api/utilities', require('./routes/utilities'));
-app.use('/api/invoices', require('./routes/invoices'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/announcements', require('./routes/announcements'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/feedback', require('./routes/feedback'));
+router.post('/', async (req, res) => {
+  try {
+    const { name, username, password, role, villaId } = req.body;
+    if (!name || !username || !password) return res.status(400).json({ error: 'Thiếu thông tin người dùng' });
 
-app.get('/', (req, res) => res.json({
-  message: '✅ Resort Oceanami API is running',
-  version: '1.0.0'
-}));
+    const payload = {
+      name,
+      username: String(username).trim().toUpperCase(),
+      passwordHash: await bcrypt.hash(String(password), 10),
+      role: role || 'resident',
+      active: true
+    };
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-module.exports = app;
+    if (villaId) payload.villa = villaId;
+    const user = await User.create(payload);
+    res.status(201).json({ id: user._id, username: user.username, role: user.role, name: user.name });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  try {
+    const payload = { ...req.body };
+    if (payload.password) {
+      payload.passwordHash = await bcrypt.hash(String(payload.password), 10);
+      delete payload.password;
+    }
+    const user = await User.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select('-passwordHash');
+    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng' });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+module.exports = router;
