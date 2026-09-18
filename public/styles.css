@@ -1,0 +1,173 @@
+const appState = {
+  user: null,
+  currentScreen: 'login',
+  invoices: [
+    { id: 'INV-09-2026', period: '09/2026', total: 8195250, status: 'Chưa thanh toán', items: [
+      { label: 'Phí quản lý', amount: 6822000 },
+      { label: 'Phí bảo trì', amount: 758000 },
+      { label: 'Điện', amount: 448500 },
+      { label: 'Nước', amount: 166750 }
+    ] }
+  ],
+  notifications: [
+    { title: 'Hóa đơn mới', body: 'Phí tháng 09/2026 đã được lập.' },
+    { title: 'Thông báo', body: 'Từ ngày 15/09, bảo trì sẽ được thực hiện vào 8:00 AM.' }
+  ],
+  community: [
+    { title: 'Nội quy chung', body: 'Vui lòng giữ vệ sinh chung mỗi tối.' },
+    { title: 'Tổ chức sinh nhật', body: 'Sẽ có sự kiện cuối tháng tại sân vườn.' },
+    { title: 'Tài khoản điện', body: 'Vui lòng kiểm tra chỉ số điện trước ngày 10.' }
+  ]
+};
+
+const screens = {
+  login: document.getElementById('loginScreen'),
+  home: document.getElementById('homeScreen'),
+  bills: document.getElementById('billsScreen'),
+  chat: document.getElementById('chatScreen'),
+  community: document.getElementById('communityScreen'),
+  account: document.getElementById('accountScreen'),
+  payment: document.getElementById('paymentScreen')
+};
+
+const titleEl = document.getElementById('pageTitle');
+const logoutBtn = document.getElementById('logoutBtn');
+const invoiceTotalEl = document.getElementById('invoiceTotal');
+const invoiceStatusEl = document.getElementById('invoiceStatus');
+const notificationListEl = document.getElementById('notificationList');
+const invoiceDetailEl = document.getElementById('invoiceDetail');
+const communityListEl = document.getElementById('communityList');
+const paymentAmountEl = document.getElementById('paymentAmount');
+const paymentInvoiceCodeEl = document.getElementById('paymentInvoiceCode');
+const accountOwnerEl = document.getElementById('accountOwner');
+const accountCodeEl = document.getElementById('accountCode');
+
+const formatMoney = (value) => new Intl.NumberFormat('vi-VN').format(value) + ' đ';
+
+function showScreen(name) {
+  Object.entries(screens).forEach(([key, el]) => {
+    el.classList.toggle('active', key === name);
+    el.classList.toggle('hidden', key !== name);
+  });
+
+  const map = {
+    login: 'Đăng nhập',
+    home: 'Trang chủ',
+    bills: 'Hóa đơn',
+    chat: 'Trò chuyện',
+    community: 'Cộng đồng',
+    account: 'Tài khoản',
+    payment: 'Thanh toán'
+  };
+
+  titleEl.textContent = map[name] || 'Đăng nhập';
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    item.classList.toggle('active', item.dataset.screen === name);
+  });
+}
+
+function renderHome() {
+  const invoice = appState.invoices[0];
+  invoiceTotalEl.textContent = formatMoney(invoice.total);
+  invoiceStatusEl.textContent = invoice.status;
+  paymentAmountEl.textContent = formatMoney(invoice.total);
+  paymentInvoiceCodeEl.textContent = invoice.id;
+
+  notificationListEl.innerHTML = appState.notifications
+    .map((n) => `<li><strong>${n.title}</strong><div>${n.body}</div></li>`)
+    .join('');
+}
+
+function renderBills() {
+  invoiceDetailEl.innerHTML = appState.invoices.map((invoice) => {
+    const items = invoice.items.map((i) => `
+      <div class="invoice-item-row">
+        <span>${i.label}</span>
+        <strong>${formatMoney(i.amount)}</strong>
+      </div>
+    `).join('');
+
+    return `
+      <div class="invoice-item">
+        <div>
+          <strong>${invoice.id}</strong>
+          <div class="meta">${invoice.period}</div>
+          <div class="meta">${invoice.status}</div>
+        </div>
+        <div class="invoice-amount">${formatMoney(invoice.total)}</div>
+      </div>
+      <div class="invoice-breakdown">${items}</div>
+    `;
+  }).join('');
+}
+
+function renderCommunity() {
+  communityListEl.innerHTML = appState.community.map((post) => `
+    <div class="community-item">
+      <strong>${post.title}</strong>
+      <div>${post.body}</div>
+    </div>
+  `).join('');
+}
+
+function renderAccount() {
+  if (!appState.user) return;
+  accountOwnerEl.textContent = appState.user.ownerName;
+  accountCodeEl.textContent = `Mã villa: ${appState.user.code}`;
+}
+
+function loginSuccess(user) {
+  appState.user = user;
+  renderHome();
+  renderBills();
+  renderCommunity();
+  renderAccount();
+  logoutBtn.classList.remove('hidden');
+  showScreen('home');
+}
+
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const code = document.getElementById('villaCode').value.trim();
+  const password = document.getElementById('password').value.trim();
+
+  if (!code || !password) {
+    alert('Vui lòng nhập mã villa và mật khẩu.');
+    return;
+  }
+
+  loginSuccess({ code, ownerName: 'MAI THỊ THU THỦY' });
+});
+
+document.querySelectorAll('.nav-item').forEach((button) => {
+  button.addEventListener('click', () => showScreen(button.dataset.screen));
+});
+
+document.querySelectorAll('.action-btn').forEach((button) => {
+  button.addEventListener('click', () => showScreen(button.dataset.target));
+});
+
+logoutBtn.addEventListener('click', () => {
+  appState.user = null;
+  logoutBtn.classList.add('hidden');
+  showScreen('login');
+});
+
+document.getElementById('sendChatBtn').addEventListener('click', () => {
+  const input = document.getElementById('chatInput');
+  const value = input.value.trim();
+  if (!value) return;
+
+  const box = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'message user';
+  el.textContent = value;
+  box.appendChild(el);
+  input.value = '';
+  box.scrollTop = box.scrollHeight;
+});
+
+showScreen('login');
+renderHome();
+renderBills();
+renderCommunity();
