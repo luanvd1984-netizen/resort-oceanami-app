@@ -4,15 +4,6 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    const rates = await UtilityRate.find().sort({ effectiveFrom: -1 });
-    res.json(rates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/active', async (req, res) => {
-  try {
     const rate = await UtilityRate.findOne({ active: true }).sort({ effectiveFrom: -1 });
     res.json(rate || {
       managementFeePerM2: 18000,
@@ -35,9 +26,14 @@ router.post('/', async (req, res) => {
       effectiveFrom: req.body.effectiveFrom || new Date()
     };
 
-    await UtilityRate.updateMany({}, { $set: { active: false } });
+    const rate = await UtilityRate.findOneAndUpdate(
+      { active: true },
+      { $set: { active: false } },
+      { new: true }
+    );
+
     const created = await UtilityRate.create(payload);
-    res.status(201).json(created);
+    res.status(201).json({ created, previous: rate });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
