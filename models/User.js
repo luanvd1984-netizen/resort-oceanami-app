@@ -4,7 +4,8 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, sparse: true },
   phone: String,
-  passwordHash: String,
+  username: { type: String, unique: true, sparse: true, trim: true, uppercase: true },
+  passwordHash: { type: String, required: true },
   role: { type: String, enum: ['admin', 'staff', 'resident'], default: 'resident' },
   villa: { type: mongoose.Schema.Types.ObjectId, ref: 'Villa' },
   active: { type: Boolean, default: true }
