@@ -1,46 +1,25 @@
-const express = require('express');
-const UtilityRate = require('../models/UtilityRate');
-const router = express.Router();
+# Resort Oceanami App
 
-router.get('/', async (req, res) => {
-  try {
-    const rates = await UtilityRate.find().sort({ effectiveFrom: -1 });
-    res.json(rates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+Ứng dụng quản lý villa, phí dịch vụ, hóa đơn và thông báo cho Resort Oceanami.
 
-router.get('/active', async (req, res) => {
-  try {
-    const rate = await UtilityRate.findOne({ active: true }).sort({ effectiveFrom: -1 });
-    res.json(rate || {
-      managementFeePerM2: 18000,
-      maintenanceFeePerM2: 2000,
-      electricityRate: 3450,
-      waterRate: 29000,
-      environmentPercent: 0.10,
-      waterVatPercent: 0.05
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+## Chạy local
 
-router.post('/', async (req, res) => {
-  try {
-    const payload = {
-      ...req.body,
-      active: true,
-      effectiveFrom: req.body.effectiveFrom || new Date()
-    };
+```bash
+npm install
+cp .env.example .env
+npm start
+```
 
-    await UtilityRate.updateMany({}, { $set: { active: false } });
-    const created = await UtilityRate.create(payload);
-    res.status(201).json(created);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+Mở `http://localhost:5000`.
 
-module.exports = router;
+## Cấu hình bắt buộc
+
+Đặt `MONGODB_URI`, `JWT_SECRET` và `BOOTSTRAP_KEY` trong `.env`. Không dùng giá trị mẫu khi triển khai thật. MongoDB phải đang chạy hoặc `MONGODB_URI` phải trỏ tới một MongoDB có thể truy cập.
+
+## Kiểm tra API
+
+```bash
+curl http://localhost:5000/api/health
+```
+
+API trả về `ok: true` khi server đã khởi động và kết nối MongoDB thành công.

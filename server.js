@@ -1,62 +1,40 @@
 const express = require('express');
-const User = require('../models/User');
-const Villa = require('../models/Villa');
-const bcrypt = require('bcryptjs');
-const router = express.Router();
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-router.get('/', async (req, res) => {
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/villas', require('./routes/villas'));
+app.use('/api/fees', require('./routes/fees'));
+app.use('/api/utilities', require('./routes/utilities'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/announcements', require('./routes/announcements'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/feedback', require('./routes/feedback'));
+
+app.get('/api/health', (req, res) => res.json({ ok: true, message: 'Resort Oceanami API is running' }));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+const port = Number(process.env.PORT || 5000);
+async function start() {
   try {
-    const users = await User.find().select('-passwordHash').populate('villa').sort({ createdAt: -1 });
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/resort-oceanami');
+    console.log('MongoDB connected');
+    app.listen(port, () => console.log(`Server running on port ${port}`));
+  } catch (error) {
+    console.error('MongoDB connection failed:', error.message);
+    process.exitCode = 1;
   }
-});
+}
 
-router.get('/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).select('-passwordHash').populate('villa');
-    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng' });
-    res.json(user);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.post('/', async (req, res) => {
-  try {
-    const { name, username, password, role, villaId } = req.body;
-    if (!name || !username || !password) return res.status(400).json({ error: 'Thiếu thông tin người dùng' });
-
-    const payload = {
-      name,
-      username: String(username).trim().toUpperCase(),
-      passwordHash: await bcrypt.hash(String(password), 10),
-      role: role || 'resident',
-      active: true
-    };
-
-    if (villaId) payload.villa = villaId;
-    const user = await User.create(payload);
-    res.status(201).json({ id: user._id, username: user.username, role: user.role, name: user.name });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-router.put('/:id', async (req, res) => {
-  try {
-    const payload = { ...req.body };
-    if (payload.password) {
-      payload.passwordHash = await bcrypt.hash(String(payload.password), 10);
-      delete payload.password;
-    }
-    const user = await User.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true }).select('-passwordHash');
-    if (!user) return res.status(404).json({ error: 'Không tìm thấy người dùng' });
-    res.json(user);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-module.exports = router;
+if (require.main === module) start();
+module.exports = { app, start };
