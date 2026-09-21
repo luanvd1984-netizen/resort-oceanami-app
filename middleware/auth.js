@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const secret = process.env.JWT_SECRET || 'change-this-secret-in-production';
+const secret = process.env.JWT_SECRET;
+if (!secret) throw new Error('JWT_SECRET is required');
 
 async function requireAuth(req, res, next) {
   try {
@@ -14,7 +15,7 @@ async function requireAuth(req, res, next) {
     req.user = user;
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Phiên đăng nhập đã hết hạn' });
+    return res.status(401).json({ error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn' });
   }
 }
 

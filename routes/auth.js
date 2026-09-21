@@ -5,7 +5,8 @@ const User = require('../models/User');
 const Villa = require('../models/Villa');
 
 const router = express.Router();
-const secret = process.env.JWT_SECRET || 'change-this-secret-in-production';
+const secret = process.env.JWT_SECRET;
+if (!secret) throw new Error('JWT_SECRET is required');
 
 const makeToken = (user) => jwt.sign(
   { id: user._id, role: user.role, villa: user.villa || null },
@@ -31,7 +32,6 @@ router.post('/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Chạy một lần sau khi import villa, dùng BOOTSTRAP_KEY trong .env.
 router.post('/bootstrap-residents', async (req, res) => {
   try {
     if (!process.env.BOOTSTRAP_KEY || req.body.key !== process.env.BOOTSTRAP_KEY) return res.status(403).json({ error: 'Không được phép' });
