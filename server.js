@@ -4,24 +4,28 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
+const { requireAuth } = require('./middleware/auth');
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Login/bootstrap and health remain public. All other API resources require a valid JWT.
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/villas', require('./routes/villas'));
-app.use('/api/fees', require('./routes/fees'));
-app.use('/api/utilities', require('./routes/utilities'));
-app.use('/api/invoices', require('./routes/invoices'));
-app.use('/api/notifications', require('./routes/notifications'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/announcements', require('./routes/announcements'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/feedback', require('./routes/feedback'));
-
 app.get('/api/health', (req, res) => res.json({ ok: true, message: 'Resort Oceanami API is running' }));
+
+app.use('/api/users', requireAuth, require('./routes/users'));
+app.use('/api/villas', requireAuth, require('./routes/villas'));
+app.use('/api/fees', requireAuth, require('./routes/fees'));
+app.use('/api/utilities', requireAuth, require('./routes/utilities'));
+app.use('/api/invoices', requireAuth, require('./routes/invoices'));
+app.use('/api/notifications', requireAuth, require('./routes/notifications'));
+app.use('/api/payments', requireAuth, require('./routes/payments'));
+app.use('/api/announcements', requireAuth, require('./routes/announcements'));
+app.use('/api/messages', requireAuth, require('./routes/messages'));
+app.use('/api/feedback', requireAuth, require('./routes/feedback'));
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const port = Number(process.env.PORT || 5000);

@@ -16,6 +16,12 @@ Mở `http://localhost:5000`.
 
 Đặt `MONGODB_URI`, `JWT_SECRET` và `BOOTSTRAP_KEY` trong `.env`. Không dùng giá trị mẫu khi triển khai thật. MongoDB phải đang chạy hoặc `MONGODB_URI` phải trỏ tới một MongoDB có thể truy cập.
 
+## Bảo vệ API
+
+- `POST /api/auth/login` và `POST /api/auth/bootstrap-residents` là các endpoint xác thực công khai; bootstrap vẫn yêu cầu `BOOTSTRAP_KEY`.
+- `GET /api/health` là endpoint kiểm tra công khai.
+- Các API còn lại yêu cầu header `Authorization: Bearer <token>`.
+
 ## Kiểm tra API
 
 ```bash
